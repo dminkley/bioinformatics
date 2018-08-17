@@ -14,26 +14,32 @@ from Bio import SeqIO
 
 def main():
     prog_description = (
-        "This script is a multiprocess whole-genome wrapper for MIReNA,"
-        " specifically for the functionality which searches for miRNAs within"
-        " a text string. Output pre-miRNA fasta sequence headers are modified"
-        " from the MIReNA default to include the genomic contig/scaffold ID"
-        " and position of the found pre-miRNA."
+        "This script is a multiprocess whole-genome wrapper for MIReNA, specifically for the"
+        " functionality which searches for miRNAs within a text string. Output pre-miRNA fasta"
+        " sequence headers are modified from the MIReNA default to include the genomic"
+        " contig/scaffold ID and position of the found pre-miRNA."
         )
     
-    parser = argparse.ArgumentParser(description=prog_description)
-    parser.add_argument("genome_file", metavar="METAVAR_TEST", help="fasta file to search for miRNAs")
-    parser.add_argument("mirna_file",
-                        help="fasta file containing miRNA sequences")
-    parser.add_argument("--n_procs", "-p", help="number of processors",
-                        type=int, default=1)
-    parser.add_argument("--temp_dir", "-t", help="directory to use for " \
-                        "temporary files", default="/tmp")
+    parser = argparse.ArgumentParser(description=prog_description, add_help=False)
+    
+    args_required = parser.add_argument_group("Required")
+    args_required.add_argument("-g", "--genome", required=True, dest="genome_fn", metavar="FASTA",
+                               help="fasta file to search for miRNAs")
+    args_required.add_argument("-m", "--mirna", required=True, dest="mirna_fn", metavar="FASTA",
+                               help="fasta file containing miRNA sequences")
+    
+    args_optional = parser.add_argument_group("Optional")
+    args_optional.add_argument("-h", "--help", help="show this help message and exit",
+                               action="help")
+    args_optional.add_argument("-p", "--n_procs", help="number of processors (default:" \
+                               " %(default)s)", type=int, default=1)
+    args_optional.add_argument("-t", "--temp_dir", help="directory to use for temporary files" \
+                               " (default: %(default)s)", default="/tmp")
+    
     args = parser.parse_args()
 
 if __name__ == "__main__":
     main()
 
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4 textwidth=80 wrap
-
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4 textwidth=100 wrap
