@@ -11,6 +11,9 @@ import argparse
 
 from Bio import SeqIO
 
+SPACER_WIDTH=1000
+SPACER_CHAR='X'
+
 def parse_arguments():
     """Parse sys.argv for arguments"""
 
@@ -37,7 +40,41 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
+def generate_single_genome_str(genome_list):
+    """ Generate a single string from SeqRecord sequences in which each constituent sequence is
+    separated from the others by a number (SPACER_WIDTH) of SPACER_CHAR bases"""
+    
+    spacer = SPACER_CHAR*SPACER_WIDTH
+    return spacer.join(str(seq_record.seq) for seq_record in genome_list)
+
+
+def create_temp_files():
+    # Content here
+
+def run_parallel_jobs():
+    # Content here
+
+def merge_results():
+    # Content here
+
+# Create miRNA group class?  Could track temp associated temp file, the miRNAs themselves, etc
+
 def main(args):
+    
+    # Read in genome
+    # Need a function to create all temporary files?
+    genome_list = [seq_record for seq_record in SeqIO.parse(args.genome, "fasta")]
+    genome_text = generate_single_genome_str(genome_list)
+   
+    # Write file could have a check to see if the file exists?
+
+    # Create temporary files
+        # Single genome file
+        # Multiple miRNA files
+
+    # Perform processing
+        
+
     do_something()
     # Read in genome; concatenate into individual long genome seq delimited by blocks of X's
     # Read in miRNAs; break into individual files of appropriate length
