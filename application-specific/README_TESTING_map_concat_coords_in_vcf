@@ -1,0 +1,19 @@
+September 4th, 2018:
+
+I compared the Palti 57k omyk SNP vcf file vs its output from the program.  Specifically, I checked:
+- All non-unplaced scaffold/non-mito lines are identical between the two VCFs, as they should be
+- Coordinates for the following lines are all properly mapped:
+	- First three NW_* lines
+	- Last marker in Super_Scaffold0
+	- First marker that is in Super_Scaffold1
+	- Last marker in the whole set (in Super_Scaffold3)
+- I checked that the actual base in the relevent Super_Scaffold matched the 'REF' base in the final
+  VCF file, as it should, for the following (they all matched):
+	- First three NW_* markers
+	- Last three markers in Super_Scaffold0
+	- First three markers in Super_Scaffold1
+	- Last three markers in the whole set (in Super_Scaffold3)
+- Both files have the same number of lines.
+- The 'fileDate' header field is properly updated to the date the program was run
+- The 'reference' header field is properly updated to the filename supplied (which should be the 'concat' file)
+

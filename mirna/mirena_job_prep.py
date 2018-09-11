@@ -14,6 +14,27 @@ from Bio import SeqIO
 SPACER_WIDTH=1000
 SPACER_CHAR='X'
 
+class SeqCollection:
+
+    def __init__(self, file_id_obj):
+        """ Given a file_id_obj of a type that can be used as input to Bio.SeqIO.parse(), create a
+        genome object that can return a list of seq_ids in the order originally present in the file,
+        as well as a dict object which accesses SeqRecord objects by id. """
+        
+        self.seq_dict = {}
+        self.seq_list = []
+        for seq_record in SeqIO.parse(file_id_obj, "fasta"):
+            self.seq_dict[seq_record.id] = seq_record
+            self.seq_list.append(seq_record)
+
+    def __iter__(self):
+        for seq_record in self.seq_list:
+            yield seq_record
+
+    @property
+    def id_list(self):
+        return [seq_record.id for seq_record in self.seq_list]
+
 def parse_arguments():
     """Parse sys.argv for arguments"""
 
@@ -36,16 +57,21 @@ def parse_arguments():
     args_optional.add_argument("-p", "--n_procs", help="number of processors (default:" \
                                " %(default)s)", type=int, default=1)
     args_optional.add_argument("-t", "--temp_dir", help="directory to use for temporary files" \
-                               " (default: %(default)s)", default="/tmp")
+                               " (default: %(default)s)", dest="temp_dir", default="/tmp")
     args = parser.parse_args()
     return args
 
-def generate_single_genome_str(genome_list):
+def create_genome_text_line(genome):
     """ Generate a single string from SeqRecord sequences in which each constituent sequence is
     separated from the others by a number (SPACER_WIDTH) of SPACER_CHAR bases"""
     
     spacer = SPACER_CHAR*SPACER_WIDTH
-    return spacer.join(str(seq_record.seq) for seq_record in genome_list)
+    return spacer.join(str(seq_record.seq) for seq_record in genome.seq_list)
+
+def run_MIReNA_tasks(tmp_text_fn, miRNA_group_filenames, args.n_procs):
+    mirena_args = [
+                    "MIReNA.sh",
+                    "--file "]
 
 
 def create_temp_files():
@@ -63,9 +89,32 @@ def main(args):
     
     # Read in genome
     # Need a function to create all temporary files?
-    genome_list = [seq_record for seq_record in SeqIO.parse(args.genome, "fasta")]
-    genome_text = generate_single_genome_str(genome_list)
+    genome = SeqCollection(args.genome_fn)
+    miRNAs = SeqCollection(args.mirna_fn)
+
+    # Create genome text file
+    genome_as_text_line = create_genome_text_line(genome)
+    tmp_text_fn = os.path.join(args.temp_dir, "temp_genome.txt")
+    tmp_text_fh = open(tmp_text_fn, 'w')
+    tmp_text_fh.write(genome_as_text_line)
+    tmp_text_fh.close()
    
+    # Create individual temp miRNA files
+    miRNA_groups = [ [] for i in range(args.n_procs) ]
+    for i, seq_record in enumerate(miRNAs):
+        miRNA_groups[i % args.n_procs].append(seq_record)
+
+    max_n_group_digits = len(str(len(miRNA_groups)))
+    miRNA_group_filenames = []
+    for group_num, seq_group in enumerate(miRNA_groups):
+        base_fn = "temp_miRNA_group_{0:0>{width}}.fa".format(group_num, width=max_n_group_digits)
+        miRNA_group_fn = os.path.join(args.temp_dir, base_fn)
+        miRNA_group_filenames.append(miRNA_group_fn)
+        SeqIO.write(seq_group, miRNA_group_fn, "fasta")
+
+    # Now need to run the jobs themselves
+    run_MIReNA_tasks(tmp_text_fn, miRNA_group_filenames, args.n_procs)
+
     # Write file could have a check to see if the file exists?
 
     # Create temporary files

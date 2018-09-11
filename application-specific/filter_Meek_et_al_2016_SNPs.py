@@ -71,14 +71,14 @@ class VariantLocus:
         self.seq_region = SeqRecord(Seq(template_seq), id="{}".format(self.variant_id), description="")
 
 def filter_variants(variant, min_read_depth=20, num_good_samples=50):
-    """ Given a VariantLocus object, return True if it has at least num_good_samples samples that
-    have at least a combined (allele1 + allele2) read depth of min_read_depth. """
+    """ Given a VariantLocus object, return True if, separately for both alleles, the read depth for 
+    the particular allele is at least min_read_depth in a minimum of num_good_samples samples. """
 
-    # Get number of samples which have the minimum read depth
-    good_samples = [sample_id for sample_id, total_reads in
-            variant.read_coverage_by_sample().items() if
-            total_reads >= min_read_depth]
-    return len(good_samples) >= num_good_samples
+    allele1_good_samples = [sample_id for sample_id, allele_counts in variant.samples.items() 
+                            if allele_counts[0] >= min_read_depth]
+    allele2_good_samples = [sample_id for sample_id, allele_counts in variant.samples.items() 
+                            if allele_counts[1] >= min_read_depth]
+    return len(allele1_good_samples) >= num_good_samples and len(allele2_good_samples) >= num_good_samples
 
 def parse_arguments():
     """Parse sys.argv for arguments"""
@@ -87,10 +87,11 @@ def parse_arguments():
         "Requires a table of RADseq-like variant markers which includes columns corresponding to "
         "marker loci and rows corresponding to samples/individuals, with cell values consisting of "
         "<allele1>,<allele2> read depth counts, as well as a fasta file with allele sequences "
-        "(with neighbouting regions).  Filters the variants to include only those which reach some "
-        "total variant read depth in some number of samples.  A fasta file containing the retained "
-        "variants is produced, with one sequence per variant and an ambiguous 'N' base at the "
-        "position of the variant base itself."
+        "(with neighbouting regions).  Filters the variants to include only those which have, "
+        "separately for each allele, at least least some minimum number of samples with a some "
+        "other minimum read depth.  A fasta file containing the retained variants is produced, "
+        "with one sequence per variant and an ambiguous 'N' base at the position of the variant "
+        "base itself."
         )
     parser = argparse.ArgumentParser(description=prog_description, add_help=False)
     args_required = parser.add_argument_group("Required")
@@ -99,19 +100,18 @@ def parse_arguments():
     args_required.add_argument("-s", "--seq", required=True, dest="SNP_seq_fn", metavar="FASTA",
                                help="fasta file with variant and neighbouring sequence, for each \
                                allele")
-    args_required.add_argument("-o", "--out", required=True, dest="out_fn", metavar="FASTA",
-                               help="output fasta file with retained variants.")
+    args_required.add_argument("-o", "--out", required=True, dest="out_fn", metavar="PREFIX",
+                               help="output prefix")
     
     args_optional = parser.add_argument_group("Optional")
     args_optional.add_argument("-h", "--help", help="show this help message and exit",
                                action="help")
-    args_optional.add_argument("-d", "--depth", help="read depth required at a variant locus in a \
-                               sample for that sample to contribute to the total number of good \
-                               samples at a variant locus (default: %(default)s)", type=int,
-                               default=10, dest="min_read_depth")
-    args_optional.add_argument("-n", "--n_samples", help="minimum number of samples with \
-                               sufficient read depth required for a variant locus to be \
-                               retained (default: %(default)s)", type=int, default=50,
+    args_optional.add_argument("-d", "--depth", help="allele read depth required at a variant \
+                               locus (default: %(default)s)", type=int, default=10,
+                               dest="min_read_depth")
+    args_optional.add_argument("-n", "--n_samples", help="minimum number of samples required \
+                               for each allele with sufficient read depth for a variant locus to \
+                               be retained (default: %(default)s)", type=int, default=50,
                                dest="num_good_samples")
     args = parser.parse_args()
     return args
@@ -153,7 +153,15 @@ def main(args):
 
     # TEMP: Output hq_variants
     hq_variant_seqs = [variant.seq_region for variant in hq_variants]
-    SeqIO.write(hq_variant_seqs, args.out_fn, "fasta")
+    SeqIO.write(hq_variant_seqs, "{}.fa".format(args.out_fn), "fasta")
+
+    # Output info file
+    fh_outinfo = open("{}.info.txt".format(args.out_fn), 'w')
+    fh_outinfo.write("# variant_id\tseq_region\tpos_in_region\tallele1\tallele2\n")
+    for variant in hq_variants:
+        fh_outinfo.write("{}\t{}\t{}\t{}\t{}\n".format(variant.variant_id, variant.seq_region.seq,
+                         variant.variant_pos_in_seq+1, variant.allele1_base, variant.allele2_base))
+
 
     print "Done! :-)"
 
