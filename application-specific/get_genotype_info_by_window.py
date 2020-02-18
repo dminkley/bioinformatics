@@ -11,7 +11,8 @@ def parse_arguments():
 
 class Window:
 
-    def __init__(self, start, end, win_num):
+    def __init__(self, contig, start, end, win_num):
+        self.contig = contig
         self.start = start
         self.end = end
         self.win_num = win_num
@@ -19,8 +20,8 @@ class Window:
 
 class GTSurveyWindow(Window):
 
-    def __init__(self, start, end, win_num, sample_ids):
-        super().__init__(start, end, win_num)
+    def __init__(self, contig, start, end, win_num, sample_ids):
+        super().__init__(contig, start, end, win_num)
         self.homR = {sample_id: 0 for sample_id in sample_ids}
         self.homA = {sample_id: 0 for sample_id in sample_ids}
         self.het = {sample_id: 0 for sample_id in sample_ids}
@@ -65,7 +66,7 @@ def gt_survey_windows(vcf_in, size, step):
         for win_num in range(win_nums_in_q_end, this_var_win_nums_end):
             win_start = win_num * step
             win_end = win_start + size      # Note these produce 0-based half-open coords
-            new_window = GTSurveyWindow(win_start, win_end, win_num, sample_ids)
+            new_window = GTSurveyWindow(contig, win_start, win_end, win_num, sample_ids)
             open_windows.append(new_window)
         win_nums_in_q_end = this_var_win_nums_end
 
@@ -123,21 +124,21 @@ def main(args):
     fh_het_out = open("{}.het.txt", 'w')
     fh_uncalled_out = open("{}.uncalled.txt", 'w')
 
-    header = "chrom\tstart\tend\t{}\n".format('\t'.join(sample_ids))
+    header = "contig\tstart\tend\t{}\n".format('\t'.join(sample_ids))
     fh_homR_out.write(header)
     fh_homA_out.write(header)
     fh_het_out.write(header)
     fh_uncalled_out.write(header)
 
     for gt_window in gt_survey_windows(vcf_in, size=args.win_size, step=args.win_step):
-        chrom = gt_window.chrom
+        contig = gt_window.contig
         start = gt_window.start
         end = gt_window.end
 
-        fh_homR.out.write("{}\t{}\t{}\t{}\n".format(chrom, start, end, '\t'.join([gt_window.homR[sample_id] for sample_id in sample_ids])))
-        fh_homA.out.write("{}\t{}\t{}\t{}\n".format(chrom, start, end, '\t'.join([gt_window.homA[sample_id] for sample_id in sample_ids])))
-        fh_het.out.write("{}\t{}\t{}\t{}\n".format(chrom, start, end, '\t'.join([gt_window.het[sample_id] for sample_id in sample_ids])))
-        fh_uncalled.out.write("{}\t{}\t{}\t{}\n".format(chrom, start, end, '\t'.join([gt_window.uncalled[sample_id] for sample_id in sample_ids])))
+        fh_homR.out.write("{}\t{}\t{}\t{}\n".format(contig, start, end, '\t'.join([gt_window.homR[sample_id] for sample_id in sample_ids])))
+        fh_homA.out.write("{}\t{}\t{}\t{}\n".format(contig, start, end, '\t'.join([gt_window.homA[sample_id] for sample_id in sample_ids])))
+        fh_het.out.write("{}\t{}\t{}\t{}\n".format(contig, start, end, '\t'.join([gt_window.het[sample_id] for sample_id in sample_ids])))
+        fh_uncalled.out.write("{}\t{}\t{}\t{}\n".format(contig, start, end, '\t'.join([gt_window.uncalled[sample_id] for sample_id in sample_ids])))
 
     echo "Done! :-)"
 
